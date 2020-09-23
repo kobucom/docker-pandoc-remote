@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# pandoc-handler - action handler for remote file access
+# Copyright (c) 2020 Kobu.Com. All rights reserved.
+# 2020-sep-17 url retrieval
+# 2020-sep-18 tested
+
+# A mod_actions-compliant 'virtual' handler can take whatever content
+# from wherever place it wants based on the URL path.
+#   Contrast this with a mod_ext_filter filter which receives
+#   content from Apache through stdin (see pandoc-filter).
+# As a simple example, this script ignores the local content and always get
+# a file from the directory of a remote server set by REMOTE_DIR environment variable.
+# if REMOTE_DIR = http://example.com/docker and PATH_INFO = /foo.md,
+# converted output of http://example/docker/foo.md is returned.
+
+#>&2 echo $(printenv)
+>&2 echo "pandoc-handler: $PATH_INFO"
+
+# send header; unlike filter, this is needed in handler
+echo 'Content-Type: text/html'
+echo ''
+
+# set title to basename of the file: 'foo' for 'foo.md'
+BASENAME=$(basename -s .md $PATH_INFO)
+
+# get markdown content from a remote directory
+curl -s $REMOTE_DIR$PATH_INFO | /usr/bin/pandoc -f gfm -t html5 -c "/pandoc-gfm.css" \
+	-T "Converted" -M title=${BASENAME}
+
+#  -c /pandoc-gfm.css - this css used if it resides at apache document root
+#  -T <title prefix>
+#  -M title=<basename> - both together form "prefix - basename"
